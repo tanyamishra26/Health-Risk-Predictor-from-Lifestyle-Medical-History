@@ -1,0 +1,32 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "app"
+version = "0.0.1"
+description = "This project builds a machine-learning\u2013based Health Risk Prediction System that analyzes a person\u2019s lifestyle habits, clinical measurements, and medical history to predict the risk of five major chronic diseases: Diabetes, Hypertension, Heart Disease, Obesity, and Cholesterol Disorders."
+authors = [
+  { name = "Tanya Mishra" },
+]
+license = { file = "LICENSE" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License"
+]
+requires-python = "~=3.12.0"
+
+
+[tool.ruff]
+line-length = 99
+src = ["app"]
+include = ["pyproject.toml", "app/**/*.py"]
+
+[tool.ruff.lint]
+extend-select = ["I"]  # Add import sorting
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+force-sort-within-sections = true
+
