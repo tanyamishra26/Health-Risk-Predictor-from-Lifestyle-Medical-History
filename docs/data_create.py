@@ -1,18 +1,13 @@
 # Python script to compute five continuous risk scores and save augmented CSV.
-# This will run in the notebook environment and also save a CSV at /mnt/data/augmented_risks.csv
-# It uses the formulas and normalizations we discussed.
-#
-# Usage: modify `input_path` if you want to use a different file. The script will handle missing values,
-# rescale weights when features are missing, and clip normalized inputs to [0,1].
-#
-# After running, the augmented CSV will be saved and displayed (first 10 rows).
+# Updated with realistic noise added per-risk-category.
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
 
 # --- User-editable path ---
 input_path = Path("Diabetes_and_LifeStyle_Dataset .csv")
-output_path = Path("augmented_risks.csv")
+output_path = Path("augmented_risks_with_noise.csv")
 
 df = pd.read_csv(input_path)
 df_orig = df.copy()
@@ -31,14 +26,13 @@ def is_current_smoker(s):
     return 1 if ("current" in s) or (s in ["yes","y","smoker","smoking"]) else 0
 
 def bool_to_bin(v):
-    # Treats 1, '1', True, 'yes' as 1; else 0
     if pd.isna(v): return 0
     if isinstance(v, (int, float, np.integer, np.floating)):
         return 1 if v==1 else 0
     s = str(v).strip().lower()
     return 1 if s in ["1","true","yes","y"] else 0
 
-# Prepare normalized feature columns (with bounds as proposed)
+# Prepare normalized feature columns
 age = df.get('Age')
 bmi = df.get('bmi')
 whr = df.get('waist_to_hip_ratio')
@@ -58,15 +52,15 @@ sleep_h = df.get('sleep_hours_per_day')
 screen_time = df.get('screen_time_hours_per_day')
 diagnosed_diabetes = df.get('diagnosed_diabetes')
 
-# Normalizations (clip to [0,1])
-age_norm_20_70 = norm_series(age, 20, 70)  # for diabetes
-age_norm_20_80 = norm_series(age, 20, 80)  # for hypertension
-age_norm_40_80 = norm_series(age, 40, 80)  # for ASCVD-like
+# Normalizations
+age_norm_20_70 = norm_series(age, 20, 70)
+age_norm_20_80 = norm_series(age, 20, 80)
+age_norm_40_80 = norm_series(age, 40, 80)
 
 bmi_norm = norm_series(bmi, 18.5, 35)
 whr_norm = norm_series(whr, 0.7, 1.1)
 
-phys_act_norm = clip01(1 - (phys_min_wk.fillna(0) / 300))  # more activity -> lower risk
+phys_act_norm = clip01(1 - (phys_min_wk.fillna(0) / 300))
 
 fam_dx_bin = df['family_history_diabetes'].apply(bool_to_bin) if 'family_history_diabetes' in df.columns else pd.Series(0, index=df.index)
 
@@ -79,39 +73,35 @@ dbp_norm = norm_series(dbp, 50, 100)
 smoker_bin = df['smoking_status'].apply(is_current_smoker) if 'smoking_status' in df.columns else pd.Series(0, index=df.index)
 
 tc_norm = norm_series(tc, 120, 300)
-hdl_inv = clip01((60 - hdl.fillna(60)) / 40)  # missing HDL treated neutral (60)
+hdl_inv = clip01((60 - hdl.fillna(60)) / 40)
 
-# obesity-related norms
-diet_norm = clip01(1 - (diet_score.fillna(50) / 100))  # assume neutral diet_score=50 if missing
+diet_norm = clip01(1 - (diet_score.fillna(50) / 100))
 sleep_norm = clip01(np.abs(7 - sleep_h.fillna(7)) / 6)
 sedentary_norm = norm_series(screen_time.fillna(0), 0, 16)
 
-# cholesterol-derived
 non_hdl = (tc.fillna(np.nan) - hdl.fillna(np.nan))
 nonhdl_norm = norm_series(non_hdl, 70, 270)
 ldl_norm = norm_series(ldl, 50, 240)
 tg_norm_for_chol = norm_series(tg, 30, 500)
 
-# Helper to compute weighted sum while handling missing components by re-normalizing weights
+# Weighted scoring helper
 def weighted_score(components, weights):
-    # components: dict name->pd.Series (values expected 0..1, NaN for missing)
-    # weights: dict name->float
     comp_df = pd.DataFrame(components)
     w = pd.Series(weights)
-    # mask NaNs per-row to zero-out missing components and adjust weight sum
     present_mask = ~comp_df.isna()
     comp_df_filled = comp_df.fillna(0)
-    # compute per-row effective weight sum
     w_arr = w.reindex(comp_df_filled.columns).fillna(0).values
     effective_w_sum = (present_mask.values * w_arr).sum(axis=1)
-    # avoid divide by zero: if effective_w_sum==0 set to 1 (will produce 0 score)
     effective_w_sum_safe = np.where(effective_w_sum==0, 1.0, effective_w_sum)
     raw = comp_df_filled.values.dot(w_arr)
-    score = raw / effective_w_sum_safe  # now between 0..1 in principle
-    # clip and convert to 0..100
+    score = raw / effective_w_sum_safe
     return clip01(score) * 100.0
 
-# 1) Diabetes risk weights & components
+# ------------------------------
+# Compute all 5 risk scores
+# ------------------------------
+
+# 1) Diabetes
 diabetes_components = {
     'age': age_norm_20_70,
     'bmi': bmi_norm,
@@ -125,7 +115,7 @@ diabetes_components = {
 diabetes_weights = {'age':0.12, 'bmi':0.18, 'whr':0.12, 'phys_act':0.12, 'fam_dx':0.12, 'fg':0.18, 'hba1c':0.12, 'tg':0.04}
 df['Diabetes_risk_score_custom'] = weighted_score(diabetes_components, diabetes_weights)
 
-# 2) Hypertension risk
+# 2) Hypertension
 hypertension_components = {
     'sbp': sbp_norm,
     'dbp': dbp_norm,
@@ -137,8 +127,7 @@ hypertension_components = {
 hypertension_weights = {'sbp':0.35, 'dbp':0.20, 'age':0.20, 'bmi':0.15, 'smoker':0.07, 'phys_act':0.03}
 df['Hypertension_risk_score_custom'] = weighted_score(hypertension_components, hypertension_weights)
 
-# 3) ASCVD-like heart disease risk
-# create diabetes_bin: prefer diagnosed_diabetes, else threshold diabetes risk > 50
+# 3) Heart disease (ASCVD-like)
 diag_bin = df['diagnosed_diabetes'].apply(bool_to_bin) if 'diagnosed_diabetes' in df.columns else pd.Series(0, index=df.index)
 diabetes_bin_for_ascvd = diag_bin.where(diag_bin==1, df['Diabetes_risk_score_custom'].fillna(0) > 50).astype(int)
 
@@ -153,7 +142,7 @@ ascvd_components = {
 ascvd_weights = {'age':0.30, 'sbp':0.22, 'tc':0.16, 'hdl_inv':0.12, 'smoker':0.12, 'diabetes_bin':0.08}
 df['HeartDisease_risk_score_custom'] = weighted_score(ascvd_components, ascvd_weights)
 
-# 4) Obesity risk
+# 4) Obesity
 obesity_components = {
     'bmi': bmi_norm,
     'whr': whr_norm,
@@ -165,7 +154,7 @@ obesity_components = {
 obesity_weights = {'bmi':0.35, 'whr':0.25, 'phys_act':0.15, 'diet':0.12, 'sleep':0.08, 'sedentary':0.05}
 df['Obesity_risk_score_custom'] = weighted_score(obesity_components, obesity_weights)
 
-# 5) Cholesterol/atherogenic risk
+# 5) Cholesterol
 chol_components = {
     'nonhdl': nonhdl_norm,
     'ldl': ldl_norm,
@@ -175,5 +164,23 @@ chol_components = {
 chol_weights = {'nonhdl':0.35, 'ldl':0.30, 'hdl_inv':0.20, 'tg':0.15}
 df['Cholesterol_risk_score_custom'] = weighted_score(chol_components, chol_weights)
 
+# ------------------------------
+# Add DIFFERENT REALISTIC NOISE
+# ------------------------------
+
+rng = np.random.default_rng(seed=42)
+
+def add_noise(series, sigma):
+    noise = rng.normal(loc=0, scale=sigma, size=len(series))
+    return clip01((series + noise) / 100.0) * 100.0
+
+df['Diabetes_risk_score_custom']      = add_noise(df['Diabetes_risk_score_custom'], sigma=2.0)
+df['Hypertension_risk_score_custom']  = add_noise(df['Hypertension_risk_score_custom'], sigma=2.5)
+df['HeartDisease_risk_score_custom']  = add_noise(df['HeartDisease_risk_score_custom'], sigma=3.5)
+df['Obesity_risk_score_custom']       = add_noise(df['Obesity_risk_score_custom'], sigma=1.5)
+df['Cholesterol_risk_score_custom']   = add_noise(df['Cholesterol_risk_score_custom'], sigma=1.0)
+
 # Save output
 df.to_csv(output_path, index=False)
+
+print("Dataset saved successfully with realistic noise:", output_path)
