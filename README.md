@@ -160,7 +160,6 @@ These are the scores used to justify shipping the tuned LightGBM as `lightgbm_ri
 │   └── model_building.ipynb
 ├── pyproject.toml
 ├── README.md
-├── references
 ├── reports
 │   └── figures
 ├── requirements.txt
