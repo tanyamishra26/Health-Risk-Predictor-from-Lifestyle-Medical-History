@@ -38,7 +38,7 @@ https://healthriskpredictionapp.streamlit.app/
 ## Overview
 The Health Risk Predictor is a machine-learning–powered application that analyzes an individual’s lifestyle, medical history, and vital health parameters to predict their risk of developing chronic diseases such as diabetes, hypertension, heart disease, obesity, and cholesterol imbalance — using only tabular data.
 
-The app converts raw medical and lifestyle inputs into personalized risk scores, visual explanations (SHAP), and actionable recommendations that empower users to improve their health early. Early detection and behavior change are critical: studies show a large portion of chronic disease burden can be reduced through preventive measures. This system brings AI-driven preventive healthcare directly to individuals, clinics, and wellness platforms.
+The app converts raw medical and lifestyle inputs into personalized risk scores, visual explanations, and actionable recommendations that empower users to improve their health early. Early detection and behavior change are critical: studies show a large portion of chronic disease burden can be reduced through preventive measures. This system brings AI-driven preventive healthcare directly to individuals, clinics, and wellness platforms.
 
 ---
 
@@ -58,7 +58,6 @@ The app converts raw medical and lifestyle inputs into personalized risk scores,
   - Family history
 - Interactive Streamlit dashboard with:
   - Risk radar chart and summary
-  - SHAP explanation charts for interpretability
   - User-friendly input forms and modern UI components
 - MultiOutputRegressor pipeline to produce five simultaneous risk outputs
 
@@ -69,7 +68,6 @@ The app converts raw medical and lifestyle inputs into personalized risk scores,
 - pandas, numpy
 - scikit-learn
 - XGBoost, LightGBM
-- SHAP
 - matplotlib, seaborn
 - FastAPI (for API / backend if deployed)
 - Joblib (model serialization)
@@ -207,8 +205,6 @@ Open the app at the URL Streamlit prints (typically http://localhost:8501).
 - Add train vs test graphs (place under `reports/figures/`), and reference them here. Example markdown to add an image:
 <img src="reports/figures/train_vs_test.png" width="100%" style="max-height:80px; object-fit:contain;">
 
-
-Include the risk radar chart and representative SHAP plots for interpretability.
 
 ---
 
