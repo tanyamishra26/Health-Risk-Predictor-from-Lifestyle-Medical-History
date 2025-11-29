@@ -208,7 +208,7 @@ Open the app at the URL Streamlit prints (typically http://localhost:8501).
 
 ## Screenshots & Visuals
 - Add train vs test graphs (place under `reports/figures/`), and reference them here. Example markdown to add an image:
-<img src="eports/figures/train_vs_test.png" width="100%" style="max-height:80px; object-fit:contain;">
+<img src="reports/figures/train_vs_test.png" width="100%" style="max-height:80px; object-fit:contain;">
 
 
 Include the risk radar chart and representative SHAP plots for interpretability.
