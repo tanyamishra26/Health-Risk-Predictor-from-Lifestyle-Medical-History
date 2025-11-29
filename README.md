@@ -86,9 +86,6 @@ Model training workflow used RandomForest, LightGBM and XGBoost. After hyperpara
    - Feature engineering to derive target-like risk signals where necessary
 3. Multi-output modeling:
    - A MultiOutputRegressor wraps the base estimator to predict five risk scores simultaneously.
-4. Prediction & explanation:
-   - The model outputs five continuous risk scores (0–100).
-   - SHAP is used to provide feature-level explanations and visualizations for each risk.
 
 <img src="reports/figures/image-1.png" width="100%" style="max-height:80px; object-fit:contain;">
 <img src="Architecture/Architecture.png" width="100%" style="max-height:80px; object-fit:contain;">
